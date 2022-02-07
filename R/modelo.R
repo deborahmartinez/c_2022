@@ -26,7 +26,8 @@ bd <- corrupcion %>%  left_join(pib, by = c("entidad", "year")) %>%
          ejercito, ministerio, policia, contacto, tramites, 
          starts_with(match = "pib_"))
 
-
+bd_completa <- bd %>%  inner_join(control, by = c("entidad", "year")) 
+# bd_completa %>%  write_excel_csv("Variables/Corrupción/Finales/completa_respaldo.csv")
 # r2 ----------------------------------------------------------------------
 
 bd %>% select(- starts_with(c("pib_")), -entidad) %>% 

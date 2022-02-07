@@ -39,6 +39,9 @@ li19 <-li19 %>%  mutate(habla_indigena = habla_indigena/pob,
   select(-pob)
 
 li <- bind_rows(li15, li17, li19)
+li <- li %>%  
+  mutate(entidad=case_when(entidad == "México"~ "Estado de México",
+                           T~entidad))
 rm(li15, li17, li19)
 # escolaridad promedio ----------------------------------------------------
 esc15 <- read_csv("Variables/Corrupción/Modificadas manualmente/escolaridad_15.csv")
