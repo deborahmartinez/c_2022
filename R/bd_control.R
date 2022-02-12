@@ -1,4 +1,8 @@
+#Crear base de datos
 
+library(dplyr)
+library(tidyverse)
+library(readxl)
 # irs ---------------------------------------------------------------------
 irs15 <- read_excel("Variables/Corrupción/Originales/IRS_entidades_mpios_2015.xlsx", skip =6)
 irs15 <-irs15 %>%  mutate(entidad = case_when(entidad == "Distrito Federal"~ "Ciudad de México",

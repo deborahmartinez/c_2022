@@ -81,3 +81,163 @@ bd %>% select(- starts_with(c("pib_")), -entidad, -year) %>%
 bd %>%  select(pib_secundarias, contacto) %>%  na.omit() %>% 
   cor
 
+
+# Modelo ------------------------------------------------------------------
+
+#Corrupción general
+
+modelo1 <- lm(pib_total~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
+               inversion,
+             data = bd_completa) 
+
+summary(modelo1)
+plot(modelo1)
+
+confint(modelo1)
+
+anova(modelo1)
+
+step(modelo1, direction = "backward", )
+
+modelo1_2 <- lm(pib_terciarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                inversion,
+              data = bd_completa) 
+summary(modelo1_2)
+
+modelo1_2 <- lm(pib_secundarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                  inversion,
+                data = bd_completa) 
+summary(modelo1_2)
+
+modelo1_3 <- lm(pib_primarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                  inversion,
+                data = bd_completa) 
+summary(modelo1_3)
+
+
+
+modelo2 <- lm(pib_total~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                inversion,
+              data = bd_completa) 
+summary(modelo2)
+
+modelo2_2 <- lm(pib_terciarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                  inversion,
+                data = bd_completa) 
+summary(modelo2_2)
+
+modelo2_2 <- lm(pib_secundarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                  inversion,
+                data = bd_completa) 
+summary(modelo2_2)
+
+modelo2_3 <- lm(pib_primarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                  inversion,
+                data = bd_completa) 
+summary(modelo2_3)
+
+# Mapa --------------------------------------------------------------------
+library(sf)
+library(leaflet)
+
+mexico <- st_read("Variables/Corrupción/Finales/dest_2015gw/dest_2015gw.shp")
+
+mexico <- mexico %>%  mutate(NOM_ENT = case_when(NOM_ENT == "Distrito Federal" ~ "Ciudad de México",
+                                                 NOM_ENT == "México" ~ "Estado de México",
+                                                 T ~NOM_ENT)) 
+# as_tibble() %>% 
+# separate(col = geometry, into =  c("lon", "lat"), sep = ", ") %>%
+# mutate(lon = gsub(pattern = "list(list(c(", replacement = "", x = lon, fixed = T))
+
+aux <- bd %>% filter(year == 2019) %>% 
+  select(entidad, corrupcion) %>% 
+  rename(NOM_ENT = entidad)
+
+mexico <- mexico %>%  left_join(aux, by = "NOM_ENT")
+
+bins <- c( 70,75, 80,85, 90,95,  100)
+pal <- colorBin("YlOrRd", domain = aux$corrupcion, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g",
+  mexico$NOM_ENT, mexico$corrupcion
+) %>% lapply(htmltools::HTML)
+
+
+percepcion_mapa <- leaflet(mexico) %>%
+  # setView(-96, 37.8, 4) %>%
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>% 
+  addPolygons(
+    fillColor = ~pal(corrupcion),
+    weight = 1,
+    opacity = 1,
+    color = "white",
+    dashArray = "",
+    fillOpacity = 0.7,
+    highlightOptions = highlightOptions(
+      weight = 5,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~corrupcion, opacity = 0.7, title = NULL,
+            position = "bottomright")
+
+
+mexico <- st_read("Variables/Corrupción/Finales/dest_2015gw/dest_2015gw.shp")
+
+mexico <- mexico %>%  mutate(NOM_ENT = case_when(NOM_ENT == "Distrito Federal" ~ "Ciudad de México",
+                                                 NOM_ENT == "México" ~ "Estado de México",
+                                                 T ~NOM_ENT)) 
+aux <- bd %>% filter(year == 2019) %>% 
+  mutate(tramites = tramites*100) %>% 
+  select(entidad, tramites) %>% 
+  rename(NOM_ENT = entidad)
+
+mexico <- mexico %>%  left_join(aux, by = "NOM_ENT")
+
+bins <- c(0,2,4,6,8,10,11)
+pal <- colorBin("YlOrRd", domain = aux$tramites, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g",
+  mexico$NOM_ENT,mexico$tramites
+) %>% lapply(htmltools::HTML)
+
+
+tramites_mapa <- leaflet(mexico) %>%
+  # setView(-96, 37.8, 4) %>%
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>% 
+  addPolygons(
+    fillColor = ~pal(tramites),
+    weight = 1,
+    opacity = 1,
+    color = "white",
+    dashArray = "",
+    fillOpacity = 0.7,
+    highlightOptions = highlightOptions(
+      weight = 5,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~tramites, opacity = 0.7, title = NULL,
+            position = "bottomright")
+
+tramites_mapa
+corrupcion_mapa
+
