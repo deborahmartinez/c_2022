@@ -5,6 +5,7 @@ library(ggpubr)
 library(purrr)  
 library(ggplot2)
 library(broom)
+library(stargazer)
 
 
 # Bases -------------------------------------------------------------------
@@ -78,6 +79,14 @@ bd %>% select(- starts_with(c("pib_")), -entidad, -year) %>%
   dplyr::arrange(desc(x)) %>% 
   rename(r.squared = x)
 
+bd %>% select(- starts_with(c("pib_")), -entidad, -year) %>% 
+  map(~lm(bd$pib_salud~ .x, data = bd)) %>% 
+  map(summary) %>% 
+  map_dbl("r.squared") %>% 
+  tidy %>% 
+  dplyr::arrange(desc(x)) %>% 
+  rename(r.squared = x)
+
 bd %>%  select(pib_secundarias, contacto) %>%  na.omit() %>% 
   cor
 
@@ -87,10 +96,14 @@ bd %>%  select(pib_secundarias, contacto) %>%  na.omit() %>%
 #Corrupción general
 
 modelo1 <- lm(pib_total~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
-               inversion,
+               inversion + exportaciones,
              data = bd_completa) 
-
+names(modelo1$coefficients) <- c("Intercept",'Percepción de corrupción','Escolaridad promedio',
+                                 'Índice de rezago social', "Estado de derecho",
+                                 "Habla indígena", "Inversión pública", "Exportaciones")
 summary(modelo1)
+modelo1%>%  stargazer(out = "~/Desktop/models.html", type = "html", dep.var.labels = "PIB total per cápita por entidad a precios constantes",
+                      title = "PIB por entidad federativa y porcentaje de la población que percibe la corrupción como frecuente y muy frecuente")
 plot(modelo1)
 
 confint(modelo1)
@@ -104,10 +117,15 @@ modelo1_2 <- lm(pib_terciarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_i
               data = bd_completa) 
 summary(modelo1_2)
 
-modelo1_2 <- lm(pib_secundarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
+ministerio <- lm(pib_terciarias~ministerio +escolaridad+irs+wjp_edoderecho+habla_indigena+
                   inversion,
                 data = bd_completa) 
-summary(modelo1_2)
+summary(ministerio)
+
+ministerio<- lm(pib_secundarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
+                  inversion,
+                data = bd_completa) 
+summary(ministerio)
 
 modelo1_3 <- lm(pib_primarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
                   inversion,
@@ -117,14 +135,27 @@ summary(modelo1_3)
 
 
 modelo2 <- lm(pib_total~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
-                inversion,
+                inversion+exportaciones,
               data = bd_completa) 
+names(modelo2$coefficients) <- c("Intercept",'Trámites en los que hubo corrupción','Escolaridad promedio',
+                                 'Índice de rezago social', "Estado de derecho",
+                                 "Habla indígena", "Inversión pública", "Exportaciones")
+summary(modelo1)
+modelo2%>%  stargazer(out = "~/Desktop/models2.html", type = "html", dep.var.labels = "PIB total per cápita por entidad a precios constantes",
+                      title = "PIB por entidad federativa y proporción de trámites en los que hubo corrupción")
 summary(modelo2)
 
 modelo2_2 <- lm(pib_terciarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
-                  inversion,
+                  inversion+exportaciones,
                 data = bd_completa) 
 summary(modelo2_2)
+
+names(modelo2_2$coefficients) <- c("Intercept",'Trámites en los que hubo corrupción','Escolaridad promedio',
+                                 'Índice de rezago social', "Estado de derecho",
+                                 "Habla indígena", "Inversión pública", "Exportaciones")
+summary(modelo2_2)
+modelo2_2%>%  stargazer(out = "~/Desktop/models2_2.html", type = "html", dep.var.labels = "PIB total per cápita por entidad a precios constantes",
+                      title = "PIB  de actividades terciarias por entidad federativa y proporción de trámites en los que hubo corrupción")
 
 modelo2_2 <- lm(pib_secundarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
                   inversion,
@@ -136,6 +167,13 @@ modelo2_3 <- lm(pib_primarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indi
                 data = bd_completa) 
 summary(modelo2_3)
 
+lm(pib_salud ~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
+     inversion+exportaciones,
+   data = bd_completa) %>%  summary()
+
+lm(pib_terciarias~contacto+escolaridad+irs+wjp_edoderecho+habla_indigena+
+     inversion+exportaciones,
+   data = bd_completa) %>%  summary()
 # Mapa --------------------------------------------------------------------
 library(sf)
 library(leaflet)
@@ -241,3 +279,40 @@ tramites_mapa <- leaflet(mexico) %>%
 tramites_mapa
 corrupcion_mapa
 
+bd %>%  filter(year ==2019) %>%  arrange(desc(corrupcion)) %>%  
+  select(entidad, tramites, corrupcion) %>% 
+  ggplot(aes(x = fct_reorder(entidad, tramites), y = tramites))+
+  ggchicklet::geom_chicklet(width = .9, alpha =.9, fill = "#0096c7")+
+  scale_y_continuous(labels=scales::percent_format(accuracy = 1))+
+  ggfittext::geom_bar_text(aes(label=scales::percent(tramites, accuracy = 1)),
+                           contrast = T)+
+  coord_flip()+
+  theme_minimal()+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        text = element_text(family = "Times New Roman", size = 20))+
+  labs(x = "Entidad", y = NULL)
+
+bd %>%  filter(year ==2019) %>%  arrange(desc(corrupcion)) %>%  
+  select(entidad, tramites, corrupcion) %>% 
+  mutate(corrupcion = corrupcion/100) %>% 
+  ggplot(aes(x = fct_reorder(entidad, corrupcion), y = corrupcion))+
+  ggchicklet::geom_chicklet(width = .9, alpha =.9, fill = "#023e8a")+
+  scale_y_continuous(labels=scales::percent_format(accuracy = 1))+
+  ggfittext::geom_bar_text(aes(label=scales::percent(corrupcion, accuracy = 1)),
+                           contrast = T)+
+  coord_flip()+
+  theme_minimal()+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        text = element_text(family = "Times New Roman", size = 20))+
+  labs(x = "Entidad", y = NULL)
+
+bd %>%  ggplot(aes(x = tramites, y = corrupcion))+
+  geom_point()+
+  geom_text(aes(label = entidad), check_overlap = T)+
+  theme_minimal()+
+  theme(text = element_text(family = "Times New Roman"))
+
+bd %>%  select(pib_terciarias, contacto) %>%na.omit() %>%   cor()
+bd_completa %>% nam
