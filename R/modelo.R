@@ -96,8 +96,8 @@ bd %>%  select(pib_secundarias, contacto) %>%  na.omit() %>%
 #Corrupción general
 
 modelo1 <- lm(pib_total~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
-               inversion + exportaciones,
-             data = bd_completa) 
+                inversion + exportaciones,
+              data = bd_completa) 
 names(modelo1$coefficients) <- c("Intercept",'Percepción de corrupción','Escolaridad promedio',
                                  'Índice de rezago social', "Estado de derecho",
                                  "Habla indígena", "Inversión pública", "Exportaciones")
@@ -113,13 +113,13 @@ anova(modelo1)
 step(modelo1, direction = "backward", )
 
 modelo1_2 <- lm(pib_terciarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
-                inversion,
-              data = bd_completa) 
+                  inversion,
+                data = bd_completa) 
 summary(modelo1_2)
 
 ministerio <- lm(pib_terciarias~ministerio +escolaridad+irs+wjp_edoderecho+habla_indigena+
-                  inversion,
-                data = bd_completa) 
+                   inversion,
+                 data = bd_completa) 
 summary(ministerio)
 
 ministerio<- lm(pib_secundarias~corrupcion+escolaridad+irs+wjp_edoderecho+habla_indigena+
@@ -151,11 +151,11 @@ modelo2_2 <- lm(pib_terciarias~tramites+escolaridad+irs+wjp_edoderecho+habla_ind
 summary(modelo2_2)
 
 names(modelo2_2$coefficients) <- c("Intercept",'Trámites en los que hubo corrupción','Escolaridad promedio',
-                                 'Índice de rezago social', "Estado de derecho",
-                                 "Habla indígena", "Inversión pública", "Exportaciones")
+                                   'Índice de rezago social', "Estado de derecho",
+                                   "Habla indígena", "Inversión pública", "Exportaciones")
 summary(modelo2_2)
 modelo2_2%>%  stargazer(out = "~/Desktop/models2_2.html", type = "html", dep.var.labels = "PIB total per cápita por entidad a precios constantes",
-                      title = "PIB  de actividades terciarias por entidad federativa y proporción de trámites en los que hubo corrupción")
+                        title = "PIB  de actividades terciarias por entidad federativa y proporción de trámites en los que hubo corrupción")
 
 modelo2_2 <- lm(pib_secundarias~tramites+escolaridad+irs+wjp_edoderecho+habla_indigena+
                   inversion,
@@ -193,7 +193,7 @@ aux <- bd %>% filter(year == 2019) %>%
 
 mexico <- mexico %>%  left_join(aux, by = "NOM_ENT")
 
-bins <- c( 70,75, 80,85, 90,95,  100)
+bins <- c( 0, 20, 40, 60, 80, 100)
 pal <- colorBin("YlOrRd", domain = aux$corrupcion, bins = bins)
 
 labels <- sprintf(
@@ -235,13 +235,14 @@ mexico <- mexico %>%  mutate(NOM_ENT = case_when(NOM_ENT == "Distrito Federal" ~
                                                  NOM_ENT == "México" ~ "Estado de México",
                                                  T ~NOM_ENT)) 
 aux <- bd %>% filter(year == 2019) %>% 
+  # select(entidad, year, corrupcion )
   mutate(tramites = tramites*100) %>% 
   select(entidad, tramites) %>% 
-  rename(NOM_ENT = entidad)
+  rename(NOM_ENT = entidad) %>%  arrange(desc(tramites))
 
 mexico <- mexico %>%  left_join(aux, by = "NOM_ENT")
 
-bins <- c(0,2,4,6,8,10,11)
+bins <- c(0,2,4,6,8,10,12)
 pal <- colorBin("YlOrRd", domain = aux$tramites, bins = bins)
 
 labels <- sprintf(
@@ -315,4 +316,35 @@ bd %>%  ggplot(aes(x = tramites, y = corrupcion))+
   theme(text = element_text(family = "Times New Roman"))
 
 bd %>%  select(pib_terciarias, contacto) %>%na.omit() %>%   cor()
-bd_completa %>% nam
+
+
+bd %>% filter(year == 2019) %>% 
+  # select(entidad, year, corrupcion )
+  # mutate(tramites = tramites*100) %>% 
+  select(entidad, tramites) %>% 
+  rename(NOM_ENT = entidad) %>%  arrange(desc(tramites)) %>% 
+  ggplot(aes(x = fct_reorder(NOM_ENT, tramites), y= tramites))+
+  ggchicklet::geom_chicklet(alpha=.8, fill = "#FF5F4A")+
+  coord_flip()+
+  theme_minimal()+
+  scale_y_continuous(labels=scales::percent_format(accuracy = 1) ) +
+  labs(x =  NULL, y= "Trámites corruptos")+
+  theme(text = element_text(family = "Times New Roman", size =16),
+        panel.grid.major = element_blank(),
+        panel.grid.minor.y  = element_blank())
+
+
+bd %>% filter(year == 2019) %>% 
+  select(entidad, corrupcion) %>% 
+  rename(NOM_ENT = entidad) %>% 
+  mutate(corrupcion = corrupcion/100) %>% 
+  ggplot(aes(x = fct_reorder(NOM_ENT, corrupcion), y= corrupcion))+
+  ggchicklet::geom_chicklet(alpha=.8, fill = "#DB1446")+
+  coord_flip()+
+  theme_minimal()+
+  scale_y_continuous(labels=scales::percent_format(accuracy = 1) ) +
+  labs(x =  NULL, y= "Percepción de corrupción frecuente y muy frecuente")+
+  theme(text = element_text(family = "Times New Roman", size =16),
+        panel.grid.major = element_blank(),
+        panel.grid.minor.y  = element_blank())
+
